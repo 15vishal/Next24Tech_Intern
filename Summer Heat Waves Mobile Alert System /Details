@@ -1,0 +1,134 @@
+python code
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import BayesianRidge
+from sklearn.kernel_ridge import KernelRidge
+from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from scipy.stats import spearmanr
+
+# Load training data
+df_train = pd.read_csv('/content/train_dataset.csv')
+df_train.head()
+
+#Loads the training dataset (train_dataset.csv) into a pandas DataFrame (df_train).#
+
+2. Data Cleaning and Preprocessing
+python code
+# Check for missing values
+df_train.isna().sum()
+
+# Drop rows with missing values
+df_train = df_train.dropna()
+
+# Split data into features (X) and target (y)
+X = df_train.drop('Next_Tmax', axis='columns')
+y = df_train['Next_Tmax']
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2023)
+
+# Scale features using MinMaxScaler
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+#Removes rows with missing values (dropna()).
+Splits data into features (X) and target (y).
+Splits the dataset into training and testing sets (train_test_split()).
+Scales features to a range using MinMaxScaler.#
+
+3. Model Selection and Evaluation
+python code
+# Define models for comparison
+models = {
+    'Random Forest Regressor': RandomForestRegressor(),
+    'Bayesian Ridge': BayesianRidge(),
+    'Kernel Ridge': KernelRidge()
+}
+
+# Cross-validate models and compare mean squared error
+model_names =[]
+model_mses_mean = []
+for model_name, model in models.items():
+    mses = cross_val_score(model, X_train_scaled, y_train, scoring='neg_mean_squared_error')
+    model_names.append(model_name)
+    model_mses_mean.append(-mses.mean())
+
+# Create DataFrame to compare models
+model_comparison = pd.DataFrame()
+model_comparison['Model'] = model_names
+model_comparison['Mean MSE'] = model_mses_mean
+model_comparison
+
+#Defines a dictionary of regression models (models) for comparison.
+Uses cross-validation (cross_val_score) to evaluate and compare models based on negative mean squared error (neg_mean_squared_error).#
+
+4. Model Optimization (Optional)
+python code
+# Optimize Random Forest Regressor hyperparameters using GridSearchCV
+model_optimizer = GridSearchCV(RandomForestRegressor(), {
+    'n_estimators': [50, 100, 150],
+    'max_depth': [None, 10, 20],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4],
+}, scoring='neg_mean_squared_error')
+
+model_optimizer.fit(X_train_scaled, y_train)
+
+optimizer_results = pd.DataFrame(model_optimizer.cv_results_)
+optimizer_results
+Uses GridSearchCV to search for optimal hyperparameters for the Random Forest Regressor based on mean squared error.
+5. Model Training and Evaluation
+python
+Copy code
+# Train final model (Random Forest Regressor) on the entire training set
+final_model = RandomForestRegressor()
+final_model.fit(X_train_scaled, y_train)
+
+# Evaluate final model on the test set
+final_model_score = final_model.score(X_test_scaled, y_test)
+y_predicted = final_model.predict(X_test_scaled)
+
+# Calculate evaluation metrics (MSE, MAE, Spearman correlation)
+mse = mean_squared_error(y_test, y_predicted)
+mae = mean_absolute_error(y_test, y_predicted)
+correlation = spearmanr(y_test, y_predicted)
+
+# Print evaluation metrics
+print(f'MSE = {mse:.4f}, MAE = {mae:.4f}, Correlation = {correlation.correlation:.4f}, P-value of correlation = {correlation.pvalue:.4f}')
+
+#Trains the final model (Random Forest Regressor) on the entire training set (final_model.fit()).
+Evaluates the trained model on the test set (final_model.score() and mean_squared_error).
+Calculates additional evaluation metrics such as Mean Absolute Error (MAE) and Spearman correlation.#
+
+6. Mobile Alert System
+python code
+# Load test data (assuming 'test_dataset.csv' contains new data for prediction)
+test_data = pd.read_csv('/content/test_dataset.csv')
+
+# Make predictions for unknown data (e.g., the first row in the test dataset)
+x_unknown = test_data.iloc[0, :]
+y_test_predicted = final_model.predict(x_unknown.values.reshape(1, -1))
+
+# Display a browser notification if the prediction is above the mean
+if y_test_predicted > y_mean:
+    from IPython.display import display, Javascript
+    def display_browser_notification(title, message):
+        display(Javascript("""
+            new Notification('{}', {{
+                body: '{}',
+                icon: 'https://via.placeholder.com/150'
+            }});
+        """.format(title, message)))
+
+    display_browser_notification("RED ALERT", "Be alert! The predicted value is above the mean.")
+
+#Loads new data (test_dataset.csv) for prediction.
+Makes predictions (final_model.predict()) for new, unknown data (e.g., the first row in the test dataset).
+Uses a browser notification (display_browser_notification) to alert users if the predicted value is above the mean (y_mean).#
+
+##Summary
+This script demonstrates a machine learning pipeline for predicting Next_Tmax (maximum temperature) and alerting users via a browser notification for potential Summer heat waves. It includes data loading, cleaning, preprocessing, model selection, optimization, training, evaluation, and real-time alerting. Ensure that your dataset paths (train_dataset.csv, test_dataset.csv) are correctly specified and that your machine learning models are appropriately chosen and evaluated for your specific application context. Adjust parameters and models as needed to improve performance or meet specific requirements.##
