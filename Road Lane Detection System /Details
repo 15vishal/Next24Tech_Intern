@@ -1,0 +1,118 @@
+python code
+import cv2
+from google.colab.patches import cv2_imshow
+import numpy as np
+
+#cv2: OpenCV library for computer vision tasks.
+cv2_imshow: A function to display images in Google Colab notebooks.
+numpy as np: NumPy library for numerical operations.
+detect_lanes(frame)#
+
+python code
+def detect_lanes(frame):
+    # Convert frame to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Apply Gaussian blur
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Apply Canny edge detection
+    edges = cv2.Canny(blur, 50, 150)
+
+    # Define region of interest
+    height, width = frame.shape[:2]
+    vertices = np.array([[(0, height), (width/2, height/2), (width, height)]], dtype=np.int32)
+    roi = region_of_interest(edges, vertices)
+
+    # Detect lines using Hough Transform
+    lines = cv2.HoughLinesP(roi, 2, np.pi/180, 100, minLineLength=40, maxLineGap=5)
+
+    # Draw lines on the frame
+    line_img = np.zeros((height, width, 3), dtype=np.uint8)
+    if lines is not None:
+        draw_lines(line_img, lines)
+
+    # Overlay lines on the original frame
+    result = cv2.addWeighted(frame, 0.8, line_img, 1, 0)
+
+    return result
+
+#Convert to Grayscale: Converts the input frame (color image) to grayscale for edge detection.
+Gaussian Blur: Reduces noise and sharpens edges using a Gaussian filter.
+Canny Edge Detection: Detects edges in the blurred grayscale image.
+Region of Interest (ROI): Defines a polygonal region where lane lines are expected. Masks the Canny edge-detected image to focus only on this region.
+Hough Transform: Detects lines in the ROI using the Hough Transform method.
+Draw Lines: Draws detected lane lines on a blank image (line_img).
+Overlay Lines: Combines the detected lines with the original frame using weighted addition to visualize the lane lines.
+region_of_interest(img, vertices)#
+
+python code
+def region_of_interest(img, vertices):
+    mask = np.zeros_like(img)
+    cv2.fillPoly(mask, vertices, 255)
+    masked_img = cv2.bitwise_and(img, mask)
+    return masked_img
+
+#Region Masking: Creates a mask (mask) of zeros with the same dimensions as the input image (img).
+Fill Polygon: Fills the specified polygon (vertices) in the mask with white color (255).
+Bitwise AND: Masks the original image (img) with the filled polygon mask (mask).
+draw_lines(img, lines, color=[255, 0, 0], thickness=3)#
+
+python code
+def draw_lines(img, lines, color=[255, 0, 0], thickness=3):
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
+#Draw Detected Lines: Iterates through the detected lines and draws each line ((x1, y1) to (x2, y2)) on the input image (img) using the specified color and thickness.
+Video Processing Loop#
+
+python code
+# Read video file
+cap = cv2.VideoCapture('/content/sample_data/test_video.mp4')
+
+# Get video details
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+# Define codec and create VideoWriter object
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter('output_video.mp4', fourcc, fps, (frame_width, frame_height))
+
+while(cap.isOpened()):
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Process frame for lane detection
+    result_frame = detect_lanes(frame)
+
+    # Write the resulting frame to the output video file
+    out.write(result_frame)
+
+    # Display the resulting frame
+    cv2_imshow(result_frame)
+
+    # Break the loop when 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release video capture and writer, and close all windows
+cap.release()
+out.release()
+cv2.destroyAllWindows()
+
+#Video Capture and Writer Setup: Opens a video file (test_video.mp4) for reading using cv2.VideoCapture.
+Video Details: Retrieves frame rate (fps), width (frame_width), and height (frame_height) of the video.
+Video Writer Setup: Creates a VideoWriter object to write processed frames into an output video file (output_video.mp4) with the same details as the input video.
+Processing Loop: Iterates through each frame of the video:
+Reads a frame (frame) from the video capture.
+Calls detect_lanes(frame) to process the frame for lane detection.
+Writes the processed frame (result_frame) to the output video file using out.write().
+Displays the processed frame using cv2_imshow.
+Breaks the loop if the 'q' key is pressed.
+Release Resources: Releases the video capture (cap), video writer (out), and closes all OpenCV windows using cv2.destroyAllWindows().#
+
+##Summary
+This code implements a basic lane detection system for videos using OpenCV in Python. It performs edge detection, applies a region of interest mask, detects lines using the Hough Transform, and overlays the detected lane lines back onto the original video frames. The resulting video (output_video.mp4) will show the original video with detected lane lines overlaid, which can be useful for applications like autonomous driving or lane departure warning systems.##
