@@ -1,0 +1,137 @@
+python code
+import tensorflow as tf
+from keras import models, layers
+import matplotlib.pyplot as plt
+import numpy as np
+
+#tensorflow is imported as tf for building and training neural networks.
+models and layers are imported from keras to define the neural network architecture.
+matplotlib.pyplot is imported as plt for plotting images.
+numpy is imported as np for numerical operations.
+Constants and Variables#
+
+python code
+IMAGE_SIZE = 256
+BATCH_SIZE = 32
+CHANNELS = 3
+
+#IMAGE_SIZE: Specifies the size (width and height) to which the input images are resized.
+BATCH_SIZE: Number of images to process in a single batch during training.
+CHANNELS: Number of color channels in the images (3 for RGB).
+Loading Training Dataset#
+
+python code
+train_dataset = tf.keras.preprocessing.image_dataset_from_directory(
+    r"F:\Next24Tech\plant leaf desease detection\train",
+    shuffle=True,
+    image_size=(IMAGE_SIZE, IMAGE_SIZE),
+    batch_size=BATCH_SIZE
+)
+
+#Uses tf.keras.preprocessing.image_dataset_from_directory to load images from the directory specified.
+Images are shuffled (shuffle=True) and resized to IMAGE_SIZE.
+BATCH_SIZE images are loaded in each batch.
+Loading Test and Validation Datasets#
+
+python code
+test_dataset = tf.keras.preprocessing.image_dataset_from_directory(
+    r"F:\Next24Tech\plant leaf desease detection",
+    shuffle=True,
+    image_size=(IMAGE_SIZE, IMAGE_SIZE),
+    batch_size=BATCH_SIZE
+)
+
+valid_dataset = tf.keras.preprocessing.image_dataset_from_directory(
+    r"F:\Next24Tech\plant leaf desease detection\valid",
+    shuffle=True,
+    image_size=(IMAGE_SIZE, IMAGE_SIZE),
+    batch_size=BATCH_SIZE
+)
+
+#Similar to train_dataset, but loads datasets from test and valid directories.
+These datasets will be used for testing and validation purposes respectively.
+Data Preprocessing and Augmentation#
+
+python code
+train_dataset = train_dataset.cache().shuffle(1000).prefetch(buffer_size=tf.data.AUTOTUNE)
+test_dataset = test_dataset.cache().shuffle(1000).prefetch(buffer_size=tf.data.AUTOTUNE)
+valid_dataset = valid_dataset.cache().shuffle(1000).prefetch(buffer_size=tf.data.AUTOTUNE)
+
+resize_and_rescale = tf.keras.Sequential([
+    layers.Resizing(IMAGE_SIZE, IMAGE_SIZE),
+    layers.Rescaling(1.0 / 255)
+])
+
+data_augmentation = tf.keras.Sequential([
+    layers.RandomFlip("horizontal_and_vertical"),
+    layers.RandomRotation(0.2)
+])
+
+#cache(): Caches the dataset in memory to accelerate data loading.
+
+shuffle(1000): Shuffles the data with a buffer size of 1000.
+
+prefetch(buffer_size=tf.data.AUTOTUNE): Prefetches data batches dynamically from disk to accelerate training.
+
+resize_and_rescale: Sequential model to resize images to IMAGE_SIZE and rescale pixel values to [0, 1].
+
+data_augmentation: Sequential model for random horizontal and vertical flips, and random rotation to augment the training dataset.
+
+Model Definition#
+
+python code
+input_shape = (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, CHANNELS)
+n_classes = 7
+EPOCHS = 10
+
+model = models.Sequential([
+    resize_and_rescale,
+    data_augmentation,
+    layers.Conv2D(32, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(n_classes, activation='softmax')
+])
+model.build(input_shape=input_shape)
+
+model.summary()
+
+#input_shape: Specifies the shape of input data (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, CHANNELS).
+n_classes: Number of output classes (assuming it's 7 based on your setup).
+model: Sequential model defined with layers for resizing, rescaling, convolution, pooling, flattening, and dense layers for classification.
+model.build(input_shape=input_shape): Builds the model with the specified input shape.
+model.summary(): Prints a summary of the model architecture.
+Compiling and Training the Model#
+
+python code
+model.compile(
+    optimizer='adam',
+    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+    metrics=['accuracy']
+)
+
+history = model.fit(
+    train_dataset,
+    epochs=EPOCHS,
+    batch_size=BATCH_SIZE,
+    verbose=1,
+    validation_data=valid_dataset
+)
+
+#model.compile: Configures the model for training with Adam optimizer, Sparse Categorical Crossentropy loss, and accuracy metric.
+model.fit: Trains the model on train_dataset for EPOCHS epochs, validating on valid_dataset.
+history: Stores training metrics like loss and accuracy over epochs.
+Evaluating the Model on Test Dataset#
+
+python code
+scores = model.evaluate(test_dataset)
+#Evaluates the trained model on test_dataset and stores the evaluation scores.
+Accessing Training History#
+
+python code
+acc = history.history['accuracy']
+#Accesses the accuracy values from the history object which stores training metrics.#
+
+##Summary
+This code sets up a CNN for plant leaf disease detection using TensorFlow/Keras. It loads datasets, preprocesses images, defines a model architecture, compiles the model, trains it on training data, evaluates on test data, and accesses training history. Ensure your dataset directories and paths (train, test, valid) are correctly specified and organized according to the expected structure for the image_dataset_from_directory function to work correctly. Adjust n_classes, EPOCHS, and other parameters as needed for your specific application.##
